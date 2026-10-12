@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dashboard Admin — Guide dev
 
-## Getting Started
+Accès : `/dashboard` (login via `/auth`).
 
-First, run the development server:
+## Guards
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- `<RequireAuth>` protège `/dashboard/*`
+- `<RequireAdmin>` protège `/dashboard/admins`
+- `http.service` → redirect `/auth` sur 401
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Rôles : `ADMIN` (tout) · `EDITOR` (contenu uniquement)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+    app/(dashboard)/dashboard/
+    ├── layout.tsx          Sidebar + header
+    ├── page.tsx            Stats
+    ├── projects/ services/ team/
+    ├── clients/ testimonials/ socials/
+    ├── navigation/         Arbre + DnD
+    ├── contacts/ quotes/
+    ├── uploads/ profile/
+    └── admins/             ADMIN only
 
-## Learn More
+## Pattern CRUD
 
-To learn more about Next.js, take a look at the following resources:
+1. **Service** étend `CrudService<X, XCreateInput, XUpdateInput>`
+2. **Hook** `useCrud(xService, { successCreate, ... })`
+3. **Page** → `DataTable` + `XFormModal` + `ConfirmDialog`
+4. **Composants** dans `components/dashboard/x/`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Design system
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`Button` · `Input` · `Select` · `Toggle` · `Modal` · `Card` · `Badge` ·
+`StatusBadge` · `RoleBadge` · `ConfirmDialog` · `DataTable` ·
+`EmptyState` · `ProgressBar` · `Toast`
 
-## Deploy on Vercel
+## Traductions
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Chaque entité traduite :
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+    translations: [
+      { locale: "fr", title: "...", description: "..." },
+      { locale: "en", title: "...", description: "..." },
+    ]
+
+5 onglets via `SUPPORTED_LOCALES` (fr, en, de, zh, es).
+
+## Modules spécifiques
+
+- **Dashboard** — `GET /api/stats`
+- **Navigation** — arbre + `@dnd-kit` + `PATCH /api/nav/reorder`
+- **Contacts** — filtres statut + modal détail + delete (ADMIN)
+- **Admins** — CRUD + masque delete sur son propre compte
+- **Profile** — nom/email + changement mot de passe (révoque sessions)
+
+## Ajouter un module
+
+1. `types/<entity>.types.ts` + export dans `types/index.ts`
+2. `endpoints/<entity>.endpoints.ts`
+3. `services/<entity>/<entity>.service.ts`
+4. `hooks/use<Entity>.ts`
+5. `components/dashboard/<entity>/<Entity>FormModal.tsx`
+6. `app/(dashboard)/dashboard/<entity>/page.tsx`
+7. Entrée dans la sidebar
+
+## Conventions
+
+- Fichiers composants : `PascalCase.tsx`
+- Services/hooks/utils : `camelCase.ts`
+- Endpoints : `X_ENDPOINTS`
+- Imports : externes → UI → dashboard → services → types → utils
+- Erreurs : toujours `ApiError` + toast
+
+## Docs liées
+
+- `README.md` — Frontend
+- `README_API.md` — Backend
+
+License : UNLICENSED

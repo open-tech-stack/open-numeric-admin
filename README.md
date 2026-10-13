@@ -1,80 +1,187 @@
-# Dashboard Admin — Guide dev
+### 1️⃣ Installation
 
-Accès : `/dashboard` (login via `/auth`).
+```bash
+npm install
+```
 
-## Guards
+### 2️⃣ Variables d'environnement
 
-- `<RequireAuth>` protège `/dashboard/*`
-- `<RequireAdmin>` protège `/dashboard/admins`
-- `http.service` → redirect `/auth` sur 401
+Crée un fichier `.env.local` à la racine :
 
-Rôles : `ADMIN` (tout) · `EDITOR` (contenu uniquement)
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
 
-## Structure
+> ⚠️ L'API backend doit tourner en parallèle → voir [README_API.md](./README_API.md)
 
-    app/(dashboard)/dashboard/
-    ├── layout.tsx          Sidebar + header
-    ├── page.tsx            Stats
-    ├── projects/ services/ team/
-    ├── clients/ testimonials/ socials/
-    ├── navigation/         Arbre + DnD
-    ├── contacts/ quotes/
-    ├── uploads/ profile/
-    └── admins/             ADMIN only
+### 3️⃣ Lancer le serveur
 
-## Pattern CRUD
+```bash
+npm run dev
+```
 
-1. **Service** étend `CrudService<X, XCreateInput, XUpdateInput>`
-2. **Hook** `useCrud(xService, { successCreate, ... })`
-3. **Page** → `DataTable` + `XFormModal` + `ConfirmDialog`
-4. **Composants** dans `components/dashboard/x/`
+<div align="center">
 
-## Design system
+🌐 **http://localhost:3000**
 
-`Button` · `Input` · `Select` · `Toggle` · `Modal` · `Card` · `Badge` ·
-`StatusBadge` · `RoleBadge` · `ConfirmDialog` · `DataTable` ·
-`EmptyState` · `ProgressBar` · `Toast`
+</div>
 
-## Traductions
+---
 
-Chaque entité traduite :
+## 📁 Structure du projet
 
-    translations: [
-      { locale: "fr", title: "...", description: "..." },
-      { locale: "en", title: "...", description: "..." },
-    ]
+```txt
+src/
+├── 📂 app/
+│   ├── 🌍 (site)/              # Site vitrine public
+│   ├── 🔑 (auth)/auth/         # Login admin
+│   └── 🛡️ (dashboard)/         # Dashboard admin
+│
+├── 📂 components/
+│   ├── 🎨 ui/                  # Design system
+│   ├── 📊 dashboard/           # Composants dashboard
+│   └── 🔒 auth/                # Guards
+│
+├── 📂 contexts/
+│   └── 🔐 AuthContext.tsx
+│
+├── 📂 hooks/
+│   ├── useAuth.ts
+│   ├── useCrud.ts
+│   ├── useStats.ts
+│   └── useNav.ts
+│
+├── 📂 services/
+│   ├── ⚙️ core/                # HTTP + CRUD générique
+│   └── 🔌 */                   # Par module
+│
+├── 📂 endpoints/               # Chemins API centralisés
+├── 📂 types/                   # Types TS partagés
+└── 📂 lib/                     # Utils
+```
 
-5 onglets via `SUPPORTED_LOCALES` (fr, en, de, zh, es).
+---
 
-## Modules spécifiques
+## 🔐 Authentification
 
-- **Dashboard** — `GET /api/stats`
-- **Navigation** — arbre + `@dnd-kit` + `PATCH /api/nav/reorder`
-- **Contacts** — filtres statut + modal détail + delete (ADMIN)
-- **Admins** — CRUD + masque delete sur son propre compte
-- **Profile** — nom/email + changement mot de passe (révoque sessions)
+<div align="center">
 
-## Ajouter un module
+| 🍪 Cookie          | 🔒 HttpOnly | 📁 Path     | ⏱️ Durée  |
+| ------------------ | :---------: | ----------- | --------- |
+| `on.accessToken`   |     ✅      | `/`         | 15 min    |
+| `on.refreshToken`  |     ✅      | `/api/auth` | 7 jours   |
+| `on.user`          |     ❌      | `/`         | 7 jours   |
 
-1. `types/<entity>.types.ts` + export dans `types/index.ts`
-2. `endpoints/<entity>.endpoints.ts`
-3. `services/<entity>/<entity>.service.ts`
-4. `hooks/use<Entity>.ts`
-5. `components/dashboard/<entity>/<Entity>FormModal.tsx`
-6. `app/(dashboard)/dashboard/<entity>/page.tsx`
-7. Entrée dans la sidebar
+</div>
 
-## Conventions
+### 🔄 Flux
 
-- Fichiers composants : `PascalCase.tsx`
-- Services/hooks/utils : `camelCase.ts`
-- Endpoints : `X_ENDPOINTS`
-- Imports : externes → UI → dashboard → services → types → utils
-- Erreurs : toujours `ApiError` + toast
+```txt
+1️⃣  POST /api/auth/login       →  🍪 cookies posés
+2️⃣  GET  /api/auth/me          →  👤 profil chargé
+3️⃣  RequireAuth vérifie        →  🚫 sinon redirect /auth
+4️⃣  http.service gère 401      →  ↩️ redirect auto
+5️⃣  POST /api/auth/logout      →  🧹 clear cookies
+```
 
-## Docs liées
+---
 
-- `README.md` — Frontend
-- `README_API.md` — Backend
+## 🧭 Pages du dashboard
 
-License : UNLICENSED
+<div align="center">
+
+| 🖥️ Page                      | 📝 Rôle                 | 🔐 Accès  |
+| ---------------------------- | ----------------------- | --------- |
+| 🏠 `/dashboard`              | Vue d'ensemble (stats)  | 🔵 Auth   |
+| 📦 `/dashboard/projects`     | Projets                 | 🔵 Auth   |
+| 🧰 `/dashboard/services`     | Services                | 🔵 Auth   |
+| 👥 `/dashboard/team`         | Équipe                  | 🔵 Auth   |
+| 🏢 `/dashboard/clients`      | Clients                 | 🔵 Auth   |
+| 💬 `/dashboard/testimonials` | Témoignages             | 🔵 Auth   |
+| 🔗 `/dashboard/socials`      | Réseaux                 | 🔵 Auth   |
+| 🧭 `/dashboard/navigation`   | Menus (DnD)             | 🔵 Auth   |
+| 📬 `/dashboard/contacts`     | Messages                | 🔵 Auth   |
+| 📄 `/dashboard/quotes`       | Devis                   | 🔵 Auth   |
+| 🖼️ `/dashboard/uploads`      | Médias                  | 🔵 Auth   |
+| 👤 `/dashboard/profile`      | Mon profil              | 🔵 Auth   |
+| 🛡️ `/dashboard/admins`       | Admins                  | 🔴 ADMIN  |
+
+</div>
+
+---
+
+## 🧩 Pattern CRUD
+
+Chaque entité suit le même pattern en 3 étapes :
+
+### 1️⃣ Service
+
+```ts
+class XService extends CrudService<X, XCreateInput, XUpdateInput> {}
+export const xService = new XService();
+```
+
+### 2️⃣ Hook
+
+```ts
+const { items, loading, create, update, remove } = useCrud(xService);
+```
+
+### 3️⃣ Page
+
+```tsx
+<DataTable data={items} columns={columns} config={{ actions }} />
+<XFormModal open={...} onSubmit={...} />
+<ConfirmDialog open={...} onConfirm={...} />
+```
+
+---
+
+## 📦 Scripts
+
+```bash
+npm run dev        # 🚀 Développement
+npm run build      # 📦 Build production
+npm run start      # ▶️  Production
+npm run lint       # 🔍 ESLint
+npm run typecheck  # 🟦 tsc --noEmit
+```
+
+---
+
+## 🚀 Déploiement
+
+<div align="center">
+
+| 🌐 Cible | 🛠️ Plateforme                         |
+| -------- | ------------------------------------- |
+| Frontend | ▲ Vercel                              |
+| API      | 🚂 Railway · 🪰 Fly.io · 🖥️ VPS       |
+| Images   | ☁️ Cloudflare R2 · 🖼️ Cloudinary      |
+
+</div>
+
+---
+
+## 📚 Documentation liée
+
+<div align="center">
+
+| 📄 Fichier                          | 📝 Contenu                      |
+| ----------------------------------- | ------------------------------- |
+| [README_API.md](./README_API.md)     | Backend NestJS + Prisma         |
+| [README_ADMIN.md](./README_ADMIN.md) | Guide développeur dashboard     |
+
+</div>
+
+---
+
+<div align="center">
+
+## 📄 License
+
+**UNLICENSED** — Projet privé Open Numeric.
+
+Fait avec ❤️ par **Open Numeric**
+
+</div>

@@ -33,45 +33,36 @@ export interface Admin {
   displayName: string;
   email: string | null;
   role: AdminRole;
-  isActive: boolean;
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 /* ============================================================
-   Payloads API — les types qui te manquaient
+   Payloads API
    ============================================================ */
 
-/** Alias utilisé par AdminForm et le service. */
 export interface AdminCreateInput {
   username: string;
   password: string;
   displayName: string;
   email?: string;
   role: AdminRole;
-  isActive?: boolean;
 }
 
-/** Tous les champs sont optionnels (PATCH partiel). */
 export interface AdminUpdateInput {
   username?: string;
   password?: string;
   displayName?: string;
   email?: string;
   role?: AdminRole;
-  isActive?: boolean;
 }
-
-/* ============================================================
-   Alias optionnels (pour cohérence avec d'autres entités)
-   ============================================================ */
 
 export type CreateAdminInput = AdminCreateInput;
 export type UpdateAdminInput = AdminUpdateInput;
 
 /* ============================================================
-   Version allégée (auteurs, selects…)
+   Version allégée (auteurs, selects)
    ============================================================ */
 
 export interface AdminMinimal {

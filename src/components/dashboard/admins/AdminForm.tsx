@@ -15,7 +15,12 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/cn";
-import { Admin, AdminRole } from "@/types";
+import type {
+  Admin,
+  AdminCreateInput,
+  AdminRole,
+  AdminUpdateInput,
+} from "@/types";
 
 /* =========================================================
    TYPES
@@ -24,7 +29,9 @@ import { Admin, AdminRole } from "@/types";
 interface AdminFormProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void | Promise<void>;
+  onSubmit: (
+    data: AdminCreateInput | AdminUpdateInput,
+  ) => void | Promise<void>;
   initialData?: Admin | null;
   submitting?: boolean;
 }
@@ -35,7 +42,6 @@ interface FormValues {
   displayName: string;
   email: string;
   role: AdminRole;
-  isActive: boolean;
 }
 
 const DEFAULT_VALUES: FormValues = {
@@ -44,14 +50,17 @@ const DEFAULT_VALUES: FormValues = {
   displayName: "",
   email: "",
   role: "EDITOR",
-  isActive: true,
 };
 
 /* =========================================================
    ROLES
    ========================================================= */
 
-const ROLE_OPTIONS: { value: AdminRole; label: string; description: string }[] = [
+const ROLE_OPTIONS: {
+  value: AdminRole;
+  label: string;
+  description: string;
+}[] = [
   {
     value: "ADMIN",
     label: "Administrateur",
@@ -60,7 +69,8 @@ const ROLE_OPTIONS: { value: AdminRole; label: string; description: string }[] =
   {
     value: "EDITOR",
     label: "Éditeur",
-    description: "Gestion du contenu uniquement (pas d'accès aux admins/paramètres).",
+    description:
+      "Gestion du contenu uniquement (pas d'accès aux admins/paramètres).",
   },
 ];
 
@@ -81,7 +91,6 @@ export default function AdminForm({
 
   const isEdit = Boolean(initialData);
 
-  /* Init */
   useEffect(() => {
     if (!open) return;
 
@@ -92,7 +101,6 @@ export default function AdminForm({
         displayName: initialData.displayName,
         email: initialData.email ?? "",
         role: initialData.role,
-        isActive: initialData.isActive,
       });
     } else {
       setValues(DEFAULT_VALUES);
@@ -101,7 +109,7 @@ export default function AdminForm({
     setShowPassword(false);
   }, [open, initialData]);
 
-  /* Validation */
+  /* ---------------- Validation ---------------- */
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
 
@@ -120,7 +128,6 @@ export default function AdminForm({
         errs.password = "Minimum 8 caractères.";
       }
     } else {
-      /* En édition : si password est fourni, il doit être valide */
       if (values.password && values.password.length < 8) {
         errs.password = "Minimum 8 caractères.";
       }
@@ -138,23 +145,30 @@ export default function AdminForm({
     return Object.keys(errs).length === 0;
   };
 
-  /* Submit */
+  /* ---------------- Submit ---------------- */
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!validate()) return;
 
-    const payload: any = {
+    if (!isEdit) {
+      const payload: AdminCreateInput = {
+        username: values.username.trim(),
+        password: values.password,
+        displayName: values.displayName.trim(),
+        email: values.email.trim() || undefined,
+        role: values.role,
+      };
+      await onSubmit(payload);
+      return;
+    }
+
+    const payload: AdminUpdateInput = {
       displayName: values.displayName.trim(),
       email: values.email.trim() || undefined,
       role: values.role,
-      isActive: values.isActive,
     };
 
-    if (!isEdit) {
-      payload.username = values.username.trim();
-      payload.password = values.password;
-    } else if (values.password) {
-      /* En édition, on n'envoie le password que s'il est rempli */
+    if (values.password) {
       payload.password = values.password;
     }
 
@@ -188,8 +202,8 @@ export default function AdminForm({
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Username (création uniquement) */}
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        {/* Username */}
         {!isEdit ? (
           <Input
             label="Nom d'utilisateur"
@@ -200,7 +214,9 @@ export default function AdminForm({
             onChange={(e) =>
               setValues((v) => ({
                 ...v,
-                username: e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ""),
+                username: e.target.value
+                  .toLowerCase()
+                  .replace(/[^a-z0-9_.-]/g, ""),
               }))
             }
             error={errors.username}
@@ -214,7 +230,10 @@ export default function AdminForm({
               Nom d'utilisateur
             </label>
             <div className="flex items-center gap-3 h-11 px-4 rounded-xl bg-surface border border-border text-foreground-muted">
-              <User className="h-4 w-4 flex-shrink-0" />
+              <User
+                className="h-4 w-4 flex-shrink-0"
+                aria-hidden="true"
+              />
               <code className="text-sm font-mono">{values.username}</code>
               <span className="ml-auto text-[10px] uppercase tracking-wider text-foreground-subtle">
                 Non modifiable
@@ -264,14 +283,18 @@ export default function AdminForm({
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? "Cacher" : "Voir"}
+              aria-label={
+                showPassword
+                  ? "Cacher le mot de passe"
+                  : "Voir le mot de passe"
+              }
               tabIndex={-1}
               className="p-1.5 rounded-lg text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors"
             >
               {showPassword ? (
-                <EyeOff className="h-4 w-4" />
+                <EyeOff className="h-4 w-4" aria-hidden="true" />
               ) : (
-                <Eye className="h-4 w-4" />
+                <Eye className="h-4 w-4" aria-hidden="true" />
               )}
             </button>
           }
@@ -285,11 +308,11 @@ export default function AdminForm({
         />
 
         {/* Rôle */}
-        <div>
-          <label className="flex items-center gap-2 mb-2 text-sm font-semibold text-foreground">
-            <Shield className="h-4 w-4" />
+        <fieldset>
+          <legend className="flex items-center gap-2 mb-2 text-sm font-semibold text-foreground">
+            <Shield className="h-4 w-4" aria-hidden="true" />
             Rôle
-          </label>
+          </legend>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {ROLE_OPTIONS.map((opt) => {
               const isSelected = values.role === opt.value;
@@ -297,8 +320,11 @@ export default function AdminForm({
                 <button
                   key={opt.value}
                   type="button"
-                  onClick={() => setValues((v) => ({ ...v, role: opt.value }))}
+                  onClick={() =>
+                    setValues((v) => ({ ...v, role: opt.value }))
+                  }
                   disabled={submitting}
+                  aria-pressed={isSelected}
                   className={cn(
                     "flex flex-col items-start gap-1 p-4 rounded-xl border text-left transition-all",
                     isSelected
@@ -321,32 +347,18 @@ export default function AdminForm({
               );
             })}
           </div>
-        </div>
+        </fieldset>
 
-        {/* Statut */}
-        <div>
-          <label className="block mb-2 text-sm font-semibold text-foreground">
-            Statut
-          </label>
-          <button
-            type="button"
-            onClick={() => setValues((v) => ({ ...v, isActive: !v.isActive }))}
-            disabled={submitting}
-            className={cn(
-              "w-full h-11 rounded-xl border transition-colors",
-              values.isActive
-                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
-                : "bg-surface border-border text-foreground-muted",
-            )}
-          >
-            {values.isActive ? "Compte actif" : "Compte désactivé"}
-          </button>
-        </div>
-
-        {/* Warning : édition d'un admin existant */}
+        {/* Warning édition ADMIN */}
         {isEdit && initialData?.role === "ADMIN" && (
-          <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
-            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+          <div
+            role="alert"
+            className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs"
+          >
+            <AlertCircle
+              className="h-4 w-4 flex-shrink-0 mt-0.5"
+              aria-hidden="true"
+            />
             <p>
               Vous modifiez un compte ADMIN. Assurez-vous de conserver au moins
               un administrateur actif pour éviter de perdre l'accès.

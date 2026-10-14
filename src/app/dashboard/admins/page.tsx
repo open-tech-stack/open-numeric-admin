@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import DataTable from "@/components/ui/DataTable";
-import type { Admin } from "@/types";
+import type {
+  Admin,
+  AdminCreateInput,
+  AdminUpdateInput,
+} from "@/types";
 import type { Column, RowAction } from "@/types/table.types";
 import { cn } from "@/lib/cn";
 import AdminForm from "@/components/dashboard/admins/AdminForm";
@@ -45,12 +49,12 @@ export default function AdminsPage() {
     setFormOpen(true);
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: AdminCreateInput | AdminUpdateInput) => {
     if (editing) {
-      const res = await update(editing.id, data);
+      const res = await update(editing.id, data as AdminUpdateInput);
       if (res) setFormOpen(false);
     } else {
-      const res = await create(data);
+      const res = await create(data as AdminCreateInput);
       if (res) setFormOpen(false);
     }
   };
@@ -61,7 +65,7 @@ export default function AdminsPage() {
     if (ok) setToDelete(null);
   };
 
-  /* Colonnes — ⚠️ clés uniques */
+  /* Colonnes */
   const columns: Column<Admin>[] = [
     {
       key: "avatar",
@@ -75,6 +79,7 @@ export default function AdminsPage() {
               ? "bg-primary/20 text-primary"
               : "bg-surface-hover text-foreground-muted",
           )}
+          aria-hidden="true"
         >
           {row.displayName.charAt(0).toUpperCase()}
         </div>
@@ -114,12 +119,12 @@ export default function AdminsPage() {
       render: (v) =>
         v === "ADMIN" ? (
           <Badge variant="primary">
-            <ShieldAlert className="h-3 w-3" />
+            <ShieldAlert className="h-3 w-3" aria-hidden="true" />
             Admin
           </Badge>
         ) : (
           <Badge variant="info">
-            <Shield className="h-3 w-3" />
+            <Shield className="h-3 w-3" aria-hidden="true" />
             Éditeur
           </Badge>
         ),
@@ -143,18 +148,6 @@ export default function AdminsPage() {
           <span className="text-xs text-foreground-subtle">Jamais</span>
         ),
     },
-    {
-      key: "isActive",
-      label: "Statut",
-      align: "center",
-      width: "100px",
-      render: (v) =>
-        v ? (
-          <Badge variant="success">Actif</Badge>
-        ) : (
-          <Badge variant="default">Inactif</Badge>
-        ),
-    },
   ];
 
   /* Actions — masque le delete sur son propre compte */
@@ -176,8 +169,7 @@ export default function AdminsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <header className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
             Administrateurs
@@ -190,9 +182,8 @@ export default function AdminsPage() {
         <Button leftIcon={Plus} onClick={handleCreate}>
           Nouvel admin
         </Button>
-      </div>
+      </header>
 
-      {/* Tableau */}
       <DataTable
         data={admins}
         columns={columns}
@@ -206,7 +197,6 @@ export default function AdminsPage() {
         }}
       />
 
-      {/* Form */}
       <AdminForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
@@ -215,7 +205,6 @@ export default function AdminsPage() {
         submitting={false}
       />
 
-      {/* Confirm Delete */}
       <ConfirmDialog
         open={!!toDelete}
         onClose={() => setToDelete(null)}
